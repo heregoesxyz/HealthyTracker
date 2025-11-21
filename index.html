@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Daily Health Dashboard – Opulent Hardware Style</title>
+
+  <!-- Font (Saira-ish vibe) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Google Charts loader (for gviz DataTable + Query) -->
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+  <style>
+    :root {
+      --bg-main: #05050a;
+      --bg-card: #101321;
+      --bg-card-soft: #15182a;
+      --accent: #45f5b6;
+      --accent-soft: rgba(69, 245, 182, 0.15);
+      --accent-warning: #f5c445;
+      --accent-bad: #ff5c7c;
+      --text-main: #f5f7ff;
+      --text-soft: #a5abc8;
+      --border-subtle: #23263a;
+      --radius-xl: 20px;
+      --shadow-soft: 0 22px 50px rgba(0,0,0,0.65);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Saira", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #182033 0, #05050a 55%);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .oh-shell {
+      width: min(1100px, 100vw - 32px);
+      background: linear-gradient(145deg, #0a0b14 0, #090a12 40%, #05050a 100%);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(255,255,255,0.03);
+      box-shadow: var(--shadow-soft);
+      padding: 18px 20px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .oh-shell::before {
+      content: "";
+      position: absolute;
+      inset: -120px;
+      background:
+        radial-gradient(circle at -10% -20%, rgba(69,245,182,0.16), transparent 55%),
+        radial-gradient(circle at 110% -20%, rgba(118,189,255,0.12), transparent 55%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .oh-shell-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    header.oh-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .oh-title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .oh-title {
+      font-size: 1.1rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .oh-title-pill {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: linear-gradient(120deg, rgba(69,245,182,0.12), rgba(255,255,255,0.02));
+      color: var(--accent);
+    }
+
+    .oh-subtitle {
+      font-size: 0.76rem;
+      color: var(--text-soft);
+      opacity: 0.9;
+    }
+
+    .oh-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      color: var(--text-soft);
+    }
+
+    .oh-badge-row span.label {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 500;
+      opacity: 0.9;
+    }
+
+    .oh-badge-row span.value {
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.05);
+      font-weight: 500;
+    }
+
+    /* Date strip */
+    .date-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .date-nav-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: rgba(5,7,16,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: var(--text-soft);
+      cursor: pointer;
+      transition: all 0.15s ease-out;
+    }
+
+    .date-nav-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(8,14,24,0.9);
+      transform: translateY(-1px);
+    }
+
+    .date-pills {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 4px 4px;
+      border-radius: 999px;
+      background: rgba(5,8,18,0.7);
+      border: 1px solid rgba(255,255,255,0.05);
+      scrollbar-width: none;
+    }
+    .date-pills::-webkit-scrollbar {
+      display: none;
+    }
+
+    .date-pill {
+      flex: 0 0 auto;
+      font-size: 0.72rem;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-soft);
+      cursor: pointer;
+      white-space: nowrap;
+      opacity: 0.9;
+      transition: all 0.15s ease-out;
+    }
+
+    .date-pill:hover {
+      color: var(--accent);
+      border-color: rgba(69,245,182,0.35);
+      background: rgba(0,0,0,0.3);
+    }
+
+    .date-pill.active {
+      color: #05070d;
+      font-weight: 600;
+      background: radial-gradient(circle at top left, var(--accent) 0, #22b198 55%);
+      border-color: transparent;
+      box-shadow: 0 0 0 1px rgba(69,245,182,0.5), 0 0 15px rgba(69,245,182,0.55);
+    }
+
+    /* Layout: summary + table */
+    .main-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 800px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .summary-card, .table-card {
+      background: radial-gradient(circle at top left, rgba(69,245,182,0.12), transparent 55%),
+                  radial-gradient(circle at bottom right, rgba(76,110,245,0.12), transparent 55%),
+                  var(--bg-card);
+      border-radius: 18px;
+      border: 1px solid var(--border-subtle);
+      padding: 12px 12px 11px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .summary-card::before,
+    .table-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(255,255,255,0.04), transparent 55%);
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    .summary-card-inner,
+    .table-card-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      gap: 6px;
+    }
+
+    .card-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--text-soft);
+      opacity: 0.9;
+    }
+
+    .card-tag {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.3);
+      color: var(--accent);
+    }
+
+    /* Macro stats */
+    .macro-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .macro-chip {
+      background: var(--bg-card-soft);
+      border-radius: 14px;
+      padding: 8px 8px 7px;
+      border: 1px solid rgba(255,255,255,0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-height: 52px;
+    }
+
+    .macro-label {
+      font-size: 0.7rem;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .macro-value {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .macro-sub {
+      font-size: 0.68rem;
+      color: var(--text-soft);
+    }
+
+    /* Health tags */
+    .health-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .health-pill {
+      font-size: 0.7rem;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.07);
+      background: rgba(6,10,20,0.85);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .health-pill.good {
+      border-color: rgba(69,245,182,0.5);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .health-pill.warning {
+      border-color: rgba(245,196,69,0.6);
+      background: rgba(245,196,69,0.08);
+      color: var(--accent-warning);
+    }
+
+    .health-pill.bad {
+      border-color: rgba(255,92,124,0.7);
+      background: rgba(255,92,124,0.08);
+      color: var(--accent-bad);
+    }
+
+    .health-pill span.dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    /* Table */
+    .food-table-wrapper {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.05);
+      background: rgba(3,5,12,0.85);
+      max-height: 270px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .food-table-head {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-soft);
+      background: rgba(14,19,34,0.95);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    table.food-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    table.food-table thead th {
+      padding: 7px 8px;
+      text-align: left;
+      font-weight: 500;
+      font-size: 0.7rem;
+      white-space: nowrap;
+    }
+
+    table.food-table tbody {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+    }
+
+    table.food-table tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.035);
+    }
+
+    table.food-table tbody tr:nth-child(even) {
+      background: rgba(255,255,255,0.01);
+    }
+
+    table.food-table td {
+      padding: 6px 8px;
+      vertical-align: top;
+    }
+
+    .food-name {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    .notes-text {
+      font-size: 0.7rem;
+      color: var(--text-soft);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+
+    .flag-yes {
+      font-size: 0.68rem;
+      padding: 3px 6px;
+      border-radius: 999px;
+      background: rgba(69,245,182,0.14);
+      color: var(--accent);
+      border: 1px solid rgba(69,245,182,0.7);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .flag-yes-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .flag-no {
+      font-size: 0.68rem;
+      padding: 2px 5px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-soft);
+      background: rgba(0,0,0,0.35);
+    }
+
+    .no-data {
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      opacity: 0.8;
+      padding: 4px 2px 0;
+    }
+
+    /* Footer strip */
+    .oh-footer {
+      margin-top: 10px;
+      font-size: 0.68rem;
+      color: var(--text-soft);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      opacity: 0.78;
+    }
+
+    .oh-footer span.brand {
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+
+    .oh-footer span.status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(69,245,182,0.9);
+      display: inline-block;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="oh-shell">
+    <div class="oh-shell-inner">
+      <header class="oh-header">
+        <div class="oh-title-block">
+          <div class="oh-title">
+            Daily Health Dashboard
+            <span class="oh-title-pill">Nutrition · Self-check</span>
+          </div>
+          <div class="oh-subtitle">
+            Pulling directly from your Google Sheet so you just log once and review here.
+          </div>
+        </div>
+        <div class="oh-badge-row">
+          <span class="label">Source</span>
+          <span class="value">Google Sheets · Live</span>
+        </div>
+      </header>
+
+      <!-- Date navigation -->
+      <div class="date-strip">
+        <button class="date-nav-btn" id="prevDayBtn" title="Previous day">&#x2039;</button>
+        <div class="date-pills" id="datePills"></div>
+        <button class="date-nav-btn" id="nextDayBtn" title="Next day">&#x203A;</button>
+      </div>
+
+      <!-- Main layout: summary + table -->
+      <div class="main-layout">
+        <section class="summary-card">
+          <div class="summary-card-inner">
+            <div class="card-header">
+              <div class="card-title">Daily summary</div>
+              <div class="card-tag" id="currentDateLabel">–</div>
+            </div>
+
+            <div class="macro-row">
+              <div class="macro-chip">
+                <div class="macro-label">Calories</div>
+                <div class="macro-value" id="caloriesTotal">0</div>
+                <div class="macro-sub">kcal target: ~2000 </div>
+              </div>
+              <div class="macro-chip">
+                <div class="macro-label">Protein</div>
+                <div class="macro-value" id="proteinTotal">0 g</div>
+                <div class="macro-sub" id="proteinComment">–</div>
+              </div>
+              <div class="macro-chip">
+                <div class="macro-label">Fiber</div>
+                <div class="macro-value" id="fiberTotal">0 g</div>
+                <div class="macro-sub" id="fiberComment">–</div>
+              </div>
+            </div>
+
+            <div class="health-tags" id="healthTags">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </section>
+
+        <section class="table-card">
+          <div class="table-card-inner">
+            <div class="card-header">
+              <div class="card-title">Food log</div>
+              <div class="card-tag">Entries</div>
+            </div>
+
+            <div class="food-table-wrapper" id="foodTableWrapper">
+              <div class="food-table-head">
+                <table class="food-table">
+                  <thead>
+                    <tr>
+                      <th>Food</th>
+                      <th>Cal</th>
+                      <th>Protein</th>
+                      <th>Fiber</th>
+                      <th>Heart / Chol / Fats</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                </table>
+              </div>
+              <div style="flex:1; overflow-y:auto;">
+                <table class="food-table">
+                  <tbody id="foodTableBody">
+                    <!-- Rows via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="no-data" id="noDataMsg" style="display:none;">
+              No entries logged for this date in the sheet.
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="oh-footer">
+        <span class="brand">by Opulent Hardware</span>
+        <span><span class="status-dot"></span> Sheet sync: on-view only · no editing</span>
+      </footer>
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    // ---- CONFIG ----
+    const SPREADSHEET_ID = "1-lWs7VyJhhhF_c60LwszUx2SQoqLdK4zhBioJRPa7m0";
+    // Change this if your tab is named differently:
+    const SHEET_NAME = "Tab";
+
+    // We use Google Visualization Query to avoid CORS issues and API keys.
+    google.charts.load("current", { packages: ["table"] });
+    google.charts.setOnLoadCallback(initDashboard);
+
+    let rowsByDate = {};     // { "YYYY-MM-DD": [ rowObjects ] }
+    let sortedDates = [];    // [ "YYYY-MM-DD", ... ]
+    let currentIndex = 0;
+
+    function initDashboard() {
+      const baseUrl =
+        "https://docs.google.com/spreadsheets/d/" +
+        SPREADSHEET_ID +
+        "/gviz/tq?sheet=" +
+        encodeURIComponent(SHEET_NAME) +
+        "&headers=1";
+
+      // We select the columns we care about:
+      // A Date, B Food Item, C Calories, D Protein, E Fiber,
+      // F Healthy Fats, G Low Sugar, H Cholesterol-Friendly, I Heart-Healthy, J Notes
+      const queryString = "select A,B,C,D,E,F,G,H,I,J";
+
+      const query = new google.visualization.Query(baseUrl + "&tq=" + encodeURIComponent(queryString));
+      query.send(handleQueryResponse);
+    }
+
+    function handleQueryResponse(response) {
+      if (response.isError()) {
+        console.error("Error in query: " + response.getMessage() + " " + response.getDetailedMessage());
+        document.getElementById("noDataMsg").style.display = "block";
+        document.getElementById("noDataMsg").textContent =
+          "Error reading Google Sheet. Check sharing settings and sheet name.";
+        return;
+      }
+
+      const dataTable = response.getDataTable();
+      rowsByDate = {};
+
+      for (let r = 0; r < dataTable.getNumberOfRows(); r++) {
+        const dateVal = dataTable.getValue(r, 0);
+        if (!dateVal) continue;
+
+        const jsDate = dateVal instanceof Date ? dateVal : new Date(dateVal);
+        if (!jsDate || isNaN(jsDate.getTime())) continue;
+
+        const dateKey = jsDate.toISOString().slice(0, 10); // YYYY-MM-DD
+
+        if (!rowsByDate[dateKey]) rowsByDate[dateKey] = [];
+
+        rowsByDate[dateKey].push({
+          date: dateKey,
+          food: dataTable.getValue(r, 1) || "",
+          calories: Number(dataTable.getValue(r, 2)) || 0,
+          protein: Number(dataTable.getValue(r, 3)) || 0,
+          fiber: Number(dataTable.getValue(r, 4)) || 0,
+          healthyFats: (dataTable.getValue(r, 5) || "").toString(),
+          lowSugar: (dataTable.getValue(r, 6) || "").toString(),
+          cholFriendly: (dataTable.getValue(r, 7) || "").toString(),
+          heartHealthy: (dataTable.getValue(r, 8) || "").toString(),
+          notes: dataTable.getValue(r, 9) || ""
+        });
+      }
+
+      sortedDates = Object.keys(rowsByDate).sort().reverse(); // latest first
+
+      if (sortedDates.length === 0) {
+        document.getElementById("noDataMsg").style.display = "block";
+        document.getElementById("noDataMsg").textContent = "No data rows found in the sheet yet.";
+        return;
+      }
+
+      buildDatePills();
+      attachNavHandlers();
+      // Start at latest date
+      currentIndex = 0;
+      updateForCurrentIndex();
+    }
+
+    function buildDatePills() {
+      const container = document.getElementById("datePills");
+      container.innerHTML = "";
+
+      sortedDates.forEach((dateKey, index) => {
+        const pill = document.createElement("button");
+        pill.className = "date-pill";
+        pill.textContent = prettyDate(dateKey);
+        pill.dataset.index = index;
+        pill.addEventListener("click", () => {
+          currentIndex = index;
+          updateForCurrentIndex();
+        });
+        container.appendChild(pill);
+      });
+    }
+
+    function attachNavHandlers() {
+      document.getElementById("prevDayBtn").addEventListener("click", () => {
+        if (sortedDates.length === 0) return;
+        currentIndex = Math.min(sortedDates.length - 1, currentIndex + 1);
+        updateForCurrentIndex();
+      });
+
+      document.getElementById("nextDayBtn").addEventListener("click", () => {
+        if (sortedDates.length === 0) return;
+        currentIndex = Math.max(0, currentIndex - 1);
+        updateForCurrentIndex();
+      });
+    }
+
+    function updateForCurrentIndex() {
+      if (sortedDates.length === 0) return;
+
+      const dateKey = sortedDates[currentIndex];
+      const dayRows = rowsByDate[dateKey] || [];
+
+      // Update active pill
+      const pills = document.querySelectorAll(".date-pill");
+      pills.forEach(p => p.classList.remove("active"));
+      if (pills[currentIndex]) pills[currentIndex].classList.add("active");
+
+      // Update summary header date label
+      document.getElementById("currentDateLabel").textContent = prettyDate(dateKey);
+
+      // Update macro totals
+      let totalCalories = 0;
+      let totalProtein = 0;
+      let totalFiber = 0;
+
+      let yesHealthyFats = 0;
+      let yesLowSugar = 0;
+      let yesCholFriendly = 0;
+      let yesHeartHealthy = 0;
+
+      dayRows.forEach(row => {
+        totalCalories += row.calories;
+        totalProtein += row.protein;
+        totalFiber += row.fiber;
+
+        if (isYes(row.healthyFats)) yesHealthyFats++;
+        if (isYes(row.lowSugar)) yesLowSugar++;
+        if (isYes(row.cholFriendly)) yesCholFriendly++;
+        if (isYes(row.heartHealthy)) yesHeartHealthy++;
+      });
+
+      document.getElementById("caloriesTotal").textContent = Math.round(totalCalories);
+      document.getElementById("proteinTotal").textContent = totalProtein.toFixed(0) + " g";
+      document.getElementById("fiberTotal").textContent = totalFiber.toFixed(0) + " g";
+
+      // Simple heuristic comments; you can adjust targets later
+      const proteinComment = totalProtein >= 100
+        ? "Nice – high protein day."
+        : totalProtein >= 70
+          ? "Solid protein coverage."
+          : "Could likely use more protein.";
+
+      const fiberComment = totalFiber >= 30
+        ? "On point for fiber."
+        : totalFiber >= 20
+          ? "Decent fiber; room to bump."
+          : "Likely low on fiber today.";
+
+      document.getElementById("proteinComment").textContent = proteinComment;
+      document.getElementById("fiberComment").textContent = fiberComment;
+
+      // Health tags
+      renderHealthTags({
+        yesHealthyFats,
+        yesLowSugar,
+        yesCholFriendly,
+        yesHeartHealthy,
+        totalItems: dayRows.length
+      });
+
+      // Table
+      renderFoodTable(dayRows);
+    }
+
+    function renderHealthTags(stats) {
+      const container = document.getElementById("healthTags");
+      container.innerHTML = "";
+
+      if (stats.totalItems === 0) {
+        container.innerHTML = "<span class='no-data'>No entries to analyse for this date.</span>";
+        return;
+      }
+
+      const { yesHealthyFats, yesLowSugar, yesCholFriendly, yesHeartHealthy, totalItems } = stats;
+
+      const makeTag = (label, yesCount) => {
+        const ratio = yesCount / totalItems;
+        let cls = "health-pill ";
+        if (ratio >= 0.8) cls += "good";
+        else if (ratio >= 0.5) cls += "warning";
+        else cls += "bad";
+
+        const wrapper = document.createElement("div");
+        wrapper.className = cls;
+        const dot = document.createElement("span");
+        dot.className = "dot";
+        const text = document.createElement("span");
+        text.textContent = `${label} · ${yesCount}/${totalItems}`;
+        wrapper.appendChild(dot);
+        wrapper.appendChild(text);
+        return wrapper;
+      };
+
+      container.appendChild(makeTag("Heart healthy", yesHeartHealthy));
+      container.appendChild(makeTag("Cholesterol friendly", yesCholFriendly));
+      container.appendChild(makeTag("Low sugar choices", yesLowSugar));
+      container.appendChild(makeTag("Healthy fats", yesHealthyFats));
+    }
+
+    function renderFoodTable(dayRows) {
+      const body = document.getElementById("foodTableBody");
+      const noDataMsg = document.getElementById("noDataMsg");
+
+      body.innerHTML = "";
+
+      if (dayRows.length === 0) {
+        noDataMsg.style.display = "block";
+      } else {
+        noDataMsg.style.display = "none";
+      }
+
+      dayRows.forEach(row => {
+        const tr = document.createElement("tr");
+
+        const tdFood = document.createElement("td");
+        tdFood.innerHTML = `<div class="food-name">${escapeHtml(row.food)}</div>`;
+        tr.appendChild(tdFood);
+
+        const tdCal = document.createElement("td");
+        tdCal.textContent = row.calories ? row.calories.toString() : "";
+        tr.appendChild(tdCal);
+
+        const tdProt = document.createElement("td");
+        tdProt.textContent = row.protein ? row.protein + " g" : "";
+        tr.appendChild(tdProt);
+
+        const tdFiber = document.createElement("td");
+        tdFiber.textContent = row.fiber ? row.fiber + " g" : "";
+        tr.appendChild(tdFiber);
+
+        const tdFlags = document.createElement("td");
+        tdFlags.appendChild(flagChip("Heart", row.heartHealthy));
+        tdFlags.appendChild(document.createTextNode(" "));
+        tdFlags.appendChild(flagChip("Chol", row.cholFriendly));
+        tdFlags.appendChild(document.createTextNode(" "));
+        tdFlags.appendChild(flagChip("Fats", row.healthyFats));
+        tr.appendChild(tdFlags);
+
+        const tdNotes = document.createElement("td");
+        const notesDiv = document.createElement("div");
+        notesDiv.className = "notes-text";
+        notesDiv.textContent = row.notes || "";
+        tdNotes.appendChild(notesDiv);
+        tr.appendChild(tdNotes);
+
+        body.appendChild(tr);
+      });
+    }
+
+    function flagChip(label, val) {
+      const yes = isYes(val);
+      const span = document.createElement("span");
+      if (yes) {
+        span.className = "flag-yes";
+        const dot = document.createElement("span");
+        dot.className = "flag-yes-dot";
+        span.appendChild(dot);
+        const text = document.createElement("span");
+        text.textContent = label;
+        span.appendChild(text);
+      } else {
+        span.className = "flag-no";
+        span.textContent = label;
+      }
+      return span;
+    }
+
+    function isYes(val) {
+      if (!val) return false;
+      const s = val.toString().trim().toLowerCase();
+      return s === "yes" || s === "y" || s === "true";
+    }
+
+    function prettyDate(dateKey) {
+      // dateKey: "YYYY-MM-DD"
+      const [y, m, d] = dateKey.split("-").map(Number);
+      const dt = new Date(y, m - 1, d);
+      return dt.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      });
+    }
+
+    function escapeHtml(str) {
+      return str
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
