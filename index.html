@@ -46,15 +46,15 @@
       color: var(--text-main);
       display: flex;
       justify-content: center;
-      align-items: flex-start;          /* top-align so it scrolls like a feed */
+      align-items: flex-start;
       min-height: 100vh;
-      padding: 16px 0;                  /* breathing room on desktop */
+      padding: 16px 0;
       overflow-x: hidden;
       -webkit-text-size-adjust: 100%;
     }
 
     .oh-shell {
-      width: min(900px, 100vw - 24px);  /* responsive width */
+      width: min(900px, 100vw - 24px);
       background: linear-gradient(145deg, #0a0b14 0, #090a12 40%, #05050a 100%);
       border-radius: var(--radius-xl);
       border: 1px solid rgba(255,255,255,0.03);
@@ -221,14 +221,15 @@
       box-shadow: 0 0 0 1px rgba(69,245,182,0.5), 0 0 15px rgba(69,245,182,0.55);
     }
 
-    /* Layout: summary + table */
+    /* Layout: now vertical “feed”: summary card, then full-width Food Log */
     .main-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      display: flex;
+      flex-direction: column;
       gap: 12px;
     }
 
-    .summary-card, .table-card {
+    .summary-card,
+    .table-card {
       background: radial-gradient(circle at top left, rgba(69,245,182,0.12), transparent 55%),
                   radial-gradient(circle at bottom right, rgba(76,110,245,0.12), transparent 55%),
                   var(--bg-card);
@@ -362,15 +363,12 @@
       background: currentColor;
     }
 
-    /* Table */
+    /* Food log – full width, natural vertical scroll (no internal scrolling) */
     .food-table-wrapper {
       border-radius: 12px;
-      overflow: hidden;
       border: 1px solid rgba(255,255,255,0.05);
       background: rgba(3,5,12,0.85);
-      max-height: 270px;
-      display: flex;
-      flex-direction: column;
+      overflow: hidden;
     }
 
     .food-table-head {
@@ -459,7 +457,7 @@
       font-size: 0.78rem;
       color: var(--text-soft);
       opacity: 0.8;
-      padding: 4px 2px 0;
+      padding: 6px 4px 0;
     }
 
     /* Footer strip */
@@ -490,17 +488,17 @@
       margin-right: 4px;
     }
 
-    /* ===== Mobile / narrow screen tweaks ===== */
+    /* Mobile tweaks */
     @media (max-width: 800px) {
       body {
-        padding: 0;                    /* edge-to-edge on mobile, IG-style */
+        padding: 0;
         background: #05050a;
       }
 
       .oh-shell {
         width: 100%;
         min-height: 100vh;
-        border-radius: 0;              /* like a full-screen IG post */
+        border-radius: 0;
         box-shadow: none;
         border-left: none;
         border-right: none;
@@ -511,16 +509,8 @@
         align-items: flex-start;
       }
 
-      .main-layout {
-        grid-template-columns: 1fr;    /* stack summary + table */
-      }
-
-      .food-table-wrapper {
-        max-height: 220px;
-      }
-
       .notes-text {
-        max-width: 120px;              /* avoid wrapping too crazy on small screens */
+        max-width: 120px;
       }
     }
 
@@ -578,7 +568,7 @@
         <button class="date-nav-btn" id="nextDayBtn" title="Next day">&#x203A;</button>
       </div>
 
-      <!-- Main layout: summary + table -->
+      <!-- Main layout: summary (card) + full-width feed-style Food Log -->
       <div class="main-layout">
         <section class="summary-card">
           <div class="summary-card-inner">
@@ -633,13 +623,13 @@
                   </thead>
                 </table>
               </div>
-              <div style="flex:1; overflow-y:auto;">
-                <table class="food-table">
-                  <tbody id="foodTableBody">
-                    <!-- Rows via JS -->
-                  </tbody>
-                </table>
-              </div>
+
+              <!-- Natural-page-scroll body (no internal scroll) -->
+              <table class="food-table">
+                <tbody id="foodTableBody">
+                  <!-- Rows via JS -->
+                </tbody>
+              </table>
             </div>
             <div class="no-data" id="noDataMsg" style="display:none;">
               No entries logged for this date in the sheet.
@@ -656,16 +646,15 @@
   </div>
 
   <script type="text/javascript">
-    // ---- CONFIG ----
     const SPREADSHEET_ID = "1-lWs7VyJhhhF_c60LwszUx2SQoqLdK4zhBioJRPa7m0";
-    // Change this if your tab is named differently:
     const SHEET_NAME = "Tab";
 
     google.charts.load("current", { packages: ["table"] });
     google.charts.setOnLoadCallback(initDashboard);
 
-    let rowsByDate = {};     // { "YYYY-MM-DD": [ rowObjects ] }
-    let sortedDates = [];    // [ "YYYY-MM-DD", ... ]
+    let rowsByDate = {};   // { dateKey: [rows] }
+    let dateMeta = {};     // { dateKey: { label, ts } }
+    let sortedDates = [];
     let currentIndex = 0;
 
     function initDashboard() {
@@ -677,45 +666,66 @@
         "&headers=1";
 
       const queryString = "select A,B,C,D,E,F,G,H,I,J";
-
-      const query = new google.visualization.Query(baseUrl + "&tq=" + encodeURIComponent(queryString));
+      const query = new google.visualization.Query(
+        baseUrl + "&tq=" + encodeURIComponent(queryString)
+      );
       query.send(handleQueryResponse);
     }
 
     function handleQueryResponse(response) {
       if (response.isError()) {
         console.error("Error in query: " + response.getMessage() + " " + response.getDetailedMessage());
-        document.getElementById("noDataMsg").style.display = "block";
-        document.getElementById("noDataMsg").textContent =
-          "Error reading Google Sheet. Check sharing settings and sheet name.";
+        const msg = document.getElementById("noDataMsg");
+        msg.style.display = "block";
+        msg.textContent = "Error reading Google Sheet. Check sharing settings and sheet name.";
         return;
       }
 
       const dataTable = response.getDataTable();
       rowsByDate = {};
+      dateMeta = {};
 
       for (let r = 0; r < dataTable.getNumberOfRows(); r++) {
-        const dateVal = dataTable.getValue(r, 0);
-        if (!dateVal) continue;
+        const rawDateVal = dataTable.getValue(r, 0);
+        const formattedVal = dataTable.getFormattedValue(r, 0) || "";
 
-        let jsDate;
-        if (dateVal instanceof Date) {
-          jsDate = dateVal;
+        if (!rawDateVal && !formattedVal) continue;
+
+        let dateKey;
+        let ts;
+
+        if (rawDateVal instanceof Date) {
+          const y = rawDateVal.getFullYear();
+          const m = String(rawDateVal.getMonth() + 1).padStart(2, "0");
+          const d = String(rawDateVal.getDate()).padStart(2, "0");
+          dateKey = `${y}-${m}-${d}`;
+          ts = Date.UTC(y, rawDateVal.getMonth(), rawDateVal.getDate());
         } else {
-          jsDate = new Date(dateVal);
-          if (!jsDate || isNaN(jsDate.getTime())) continue;
+          const parsed = new Date(rawDateVal);
+          if (parsed && !isNaN(parsed.getTime())) {
+            const y = parsed.getFullYear();
+            const m = String(parsed.getMonth() + 1).padStart(2, "0");
+            const d = String(parsed.getDate()).padStart(2, "0");
+            dateKey = `${y}-${m}-${d}`;
+            ts = Date.UTC(y, parsed.getMonth(), parsed.getDate());
+          } else {
+            // fallback: use the formatted value as the key, and use row index as ordering
+            dateKey = formattedVal || String(rawDateVal);
+            ts = r;
+          }
         }
 
-        // Build a date key in local time (avoids UTC off-by-one)
-        const y = jsDate.getFullYear();
-        const m = String(jsDate.getMonth() + 1).padStart(2, "0");
-        const d = String(jsDate.getDate()).padStart(2, "0");
-        const dateKey = `${y}-${m}-${d}`; // YYYY-MM-DD
+        if (!dateMeta[dateKey]) {
+          dateMeta[dateKey] = {
+            label: formattedVal || dateKey,
+            ts
+          };
+        }
 
         if (!rowsByDate[dateKey]) rowsByDate[dateKey] = [];
 
         rowsByDate[dateKey].push({
-          date: dateKey,
+          dateKey,
           food: dataTable.getValue(r, 1) || "",
           calories: Number(dataTable.getValue(r, 2)) || 0,
           protein: Number(dataTable.getValue(r, 3)) || 0,
@@ -728,11 +738,15 @@
         });
       }
 
-      sortedDates = Object.keys(rowsByDate).sort().reverse(); // latest first
+      // Sort by timestamp (latest first)
+      sortedDates = Object.keys(dateMeta).sort(
+        (a, b) => dateMeta[b].ts - dateMeta[a].ts
+      );
 
       if (sortedDates.length === 0) {
-        document.getElementById("noDataMsg").style.display = "block";
-        document.getElementById("noDataMsg").textContent = "No data rows found in the sheet yet.";
+        const msg = document.getElementById("noDataMsg");
+        msg.style.display = "block";
+        msg.textContent = "No data rows found in the sheet yet.";
         return;
       }
 
@@ -749,7 +763,7 @@
       sortedDates.forEach((dateKey, index) => {
         const pill = document.createElement("button");
         pill.className = "date-pill";
-        pill.textContent = prettyDate(dateKey);
+        pill.textContent = getDateLabel(dateKey);
         pill.dataset.index = index;
         pill.addEventListener("click", () => {
           currentIndex = index;
@@ -784,10 +798,10 @@
       pills.forEach(p => p.classList.remove("active"));
       if (pills[currentIndex]) pills[currentIndex].classList.add("active");
 
-      // Update summary header date label
-      document.getElementById("currentDateLabel").textContent = prettyDate(dateKey);
+      // Use label exactly from Google Sheet column A
+      document.getElementById("currentDateLabel").textContent = getDateLabel(dateKey);
 
-      // Update macro totals
+      // Macro totals
       let totalCalories = 0;
       let totalProtein = 0;
       let totalFiber = 0;
@@ -812,7 +826,6 @@
       document.getElementById("proteinTotal").textContent = totalProtein.toFixed(0) + " g";
       document.getElementById("fiberTotal").textContent = totalFiber.toFixed(0) + " g";
 
-      // Simple heuristic comments; you can adjust targets later
       const proteinComment = totalProtein >= 100
         ? "Nice – high protein day."
         : totalProtein >= 70
@@ -837,8 +850,12 @@
         totalItems: dayRows.length
       });
 
-      // Table
+      // Food log table (feed-like: full page scroll)
       renderFoodTable(dayRows);
+    }
+
+    function getDateLabel(dateKey) {
+      return dateMeta[dateKey]?.label || dateKey;
     }
 
     function renderHealthTags(stats) {
@@ -884,6 +901,7 @@
 
       if (dayRows.length === 0) {
         noDataMsg.style.display = "block";
+        return;
       } else {
         noDataMsg.style.display = "none";
       }
@@ -948,18 +966,6 @@
       if (!val) return false;
       const s = val.toString().trim().toLowerCase();
       return s === "yes" || s === "y" || s === "true" || s === "1";
-    }
-
-    function prettyDate(dateKey) {
-      // dateKey: "YYYY-MM-DD"
-      const [y, m, d] = dateKey.split("-").map(Number);
-      const dt = new Date(y, m - 1, d);
-      return dt.toLocaleDateString(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric"
-      });
     }
 
     function escapeHtml(str) {
