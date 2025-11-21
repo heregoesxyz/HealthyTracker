@@ -415,13 +415,15 @@
       font-weight: 500;
     }
 
+    /* NOTES: now wrapping instead of clipped */
     .notes-text {
       font-size: 0.7rem;
       color: var(--text-soft);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 180px;
+      white-space: normal;      /* allow wrapping */
+      overflow: visible;        /* no clipping */
+      text-overflow: unset;     /* no ellipsis */
+      max-width: none;          /* let the cell control width */
+      line-height: 1.3;
     }
 
     .flag-yes {
@@ -506,10 +508,6 @@
 
       header.oh-header {
         align-items: flex-start;
-      }
-
-      .notes-text {
-        max-width: 120px;
       }
     }
 
