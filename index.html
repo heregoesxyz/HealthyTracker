@@ -221,7 +221,7 @@
       box-shadow: 0 0 0 1px rgba(69,245,182,0.5), 0 0 15px rgba(69,245,182,0.55);
     }
 
-    /* Layout: now vertical “feed”: summary card, then full-width Food Log */
+    /* Layout: vertical feed */
     .main-layout {
       display: flex;
       flex-direction: column;
@@ -363,7 +363,7 @@
       background: currentColor;
     }
 
-    /* Food log – full width, natural vertical scroll (no internal scrolling) */
+    /* Food log – single table, full-width, no internal scroll */
     .food-table-wrapper {
       border-radius: 12px;
       border: 1px solid rgba(255,255,255,0.05);
@@ -371,18 +371,13 @@
       overflow: hidden;
     }
 
-    .food-table-head {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--text-soft);
-      background: rgba(14,19,34,0.95);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-
     table.food-table {
       width: 100%;
       border-collapse: collapse;
+    }
+
+    table.food-table thead {
+      background: rgba(14,19,34,0.95);
     }
 
     table.food-table thead th {
@@ -391,6 +386,10 @@
       font-weight: 500;
       font-size: 0.7rem;
       white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-soft);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
 
     table.food-table tbody {
@@ -568,7 +567,7 @@
         <button class="date-nav-btn" id="nextDayBtn" title="Next day">&#x203A;</button>
       </div>
 
-      <!-- Main layout: summary (card) + full-width feed-style Food Log -->
+      <!-- Main layout: summary + feed-style Food Log -->
       <div class="main-layout">
         <section class="summary-card">
           <div class="summary-card-inner">
@@ -608,29 +607,24 @@
               <div class="card-tag">Entries</div>
             </div>
 
-            <div class="food-table-wrapper" id="foodTableWrapper">
-              <div class="food-table-head">
-                <table class="food-table">
-                  <thead>
-                    <tr>
-                      <th>Food</th>
-                      <th>Cal</th>
-                      <th>Protein</th>
-                      <th>Fiber</th>
-                      <th>Heart / Chol / Fats</th>
-                      <th>Notes</th>
-                    </tr>
-                  </thead>
-                </table>
-              </div>
-
-              <!-- Natural-page-scroll body (no internal scroll) -->
+            <div class="food-table-wrapper">
               <table class="food-table">
+                <thead>
+                  <tr>
+                    <th>Food</th>
+                    <th>Cal</th>
+                    <th>Protein</th>
+                    <th>Fiber</th>
+                    <th>Heart / Chol / Fats</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
                 <tbody id="foodTableBody">
                   <!-- Rows via JS -->
                 </tbody>
               </table>
             </div>
+
             <div class="no-data" id="noDataMsg" style="display:none;">
               No entries logged for this date in the sheet.
             </div>
@@ -709,7 +703,7 @@
             dateKey = `${y}-${m}-${d}`;
             ts = Date.UTC(y, parsed.getMonth(), parsed.getDate());
           } else {
-            // fallback: use the formatted value as the key, and use row index as ordering
+            // fallback: use formatted value as key
             dateKey = formattedVal || String(rawDateVal);
             ts = r;
           }
@@ -793,12 +787,12 @@
       const dateKey = sortedDates[currentIndex];
       const dayRows = rowsByDate[dateKey] || [];
 
-      // Update active pill
+      // Active pill
       const pills = document.querySelectorAll(".date-pill");
       pills.forEach(p => p.classList.remove("active"));
       if (pills[currentIndex]) pills[currentIndex].classList.add("active");
 
-      // Use label exactly from Google Sheet column A
+      // Date label from sheet
       document.getElementById("currentDateLabel").textContent = getDateLabel(dateKey);
 
       // Macro totals
@@ -841,7 +835,7 @@
       document.getElementById("proteinComment").textContent = proteinComment;
       document.getElementById("fiberComment").textContent = fiberComment;
 
-      // Health tags with counts
+      // Health tags
       renderHealthTags({
         yesHealthyFats,
         yesLowSugar,
@@ -850,7 +844,7 @@
         totalItems: dayRows.length
       });
 
-      // Food log table (feed-like: full page scroll)
+      // Food log rows
       renderFoodTable(dayRows);
     }
 
