@@ -359,12 +359,13 @@
       background: currentColor;
     }
 
-    /* Food log – single table, full-width, no internal scroll */
+    /* Food log – table, horizontal scroll allowed on mobile */
     .food-table-wrapper {
       border-radius: 12px;
       border: 1px solid rgba(255,255,255,0.05);
       background: rgba(3,5,12,0.85);
-      overflow: hidden;
+      overflow-x: auto;   /* key: allow sideways scroll on small screens */
+      overflow-y: visible;
     }
 
     table.food-table {
@@ -419,6 +420,7 @@
       text-overflow: unset;
       max-width: none;
       line-height: 1.3;
+      word-break: break-word; /* important for mobile */
     }
 
     .flag-yes {
@@ -534,12 +536,14 @@
         </div>
       </header>
 
+      <!-- Date navigation -->
       <div class="date-strip">
         <button class="date-nav-btn" id="prevDayBtn" title="Previous day">&#x2039;</button>
         <div class="date-pills" id="datePills"></div>
         <button class="date-nav-btn" id="nextDayBtn" title="Next day">&#x203A;</button>
       </div>
 
+      <!-- Main layout -->
       <div class="main-layout">
         <section class="summary-card">
           <div class="summary-card-inner">
@@ -652,10 +656,8 @@
         const formattedVal = (dataTable.getFormattedValue(r, 0) || "").trim();
         if (!rawVal && !formattedVal) continue;
 
-        // Label for pills = what you see in the sheet
         const label = formattedVal || String(rawVal);
 
-        // Bucket key + numeric timestamp for sorting
         let dateKey;
         let ts;
 
@@ -699,7 +701,6 @@
         });
       }
 
-      // Sort newest first by timestamp
       sortedDates = Object.keys(dateMeta).sort(
         (a, b) => dateMeta[b].ts - dateMeta[a].ts
       );
