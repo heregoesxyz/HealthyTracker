@@ -415,14 +415,14 @@
       font-weight: 500;
     }
 
-    /* NOTES: now wrapping instead of clipped */
+    /* NOTES: wrapping instead of clipped */
     .notes-text {
       font-size: 0.7rem;
       color: var(--text-soft);
-      white-space: normal;      /* allow wrapping */
-      overflow: visible;        /* no clipping */
-      text-overflow: unset;     /* no ellipsis */
-      max-width: none;          /* let the cell control width */
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
+      max-width: none;
       line-height: 1.3;
     }
 
@@ -578,7 +578,7 @@
               <div class="macro-chip">
                 <div class="macro-label">Calories</div>
                 <div class="macro-value" id="caloriesTotal">0</div>
-                <div class="macro-sub">kcal target: ~1500 </div>
+                <div class="macro-sub">kcal target: ~2000 (example)</div>
               </div>
               <div class="macro-chip">
                 <div class="macro-label">Protein</div>
@@ -678,40 +678,14 @@
       dateMeta = {};
 
       for (let r = 0; r < dataTable.getNumberOfRows(); r++) {
-        const rawDateVal = dataTable.getValue(r, 0);
-        const formattedVal = dataTable.getFormattedValue(r, 0) || "";
+        const formattedVal = (dataTable.getFormattedValue(r, 0) || "").trim();
+        if (!formattedVal) continue; // skip blank dates
 
-        if (!rawDateVal && !formattedVal) continue;
-
-        let dateKey;
-        let ts;
-
-        if (rawDateVal instanceof Date) {
-          const y = rawDateVal.getFullYear();
-          const m = String(rawDateVal.getMonth() + 1).padStart(2, "0");
-          const d = String(rawDateVal.getDate()).padStart(2, "0");
-          dateKey = `${y}-${m}-${d}`;
-          ts = Date.UTC(y, rawDateVal.getMonth(), rawDateVal.getDate());
-        } else {
-          const parsed = new Date(rawDateVal);
-          if (parsed && !isNaN(parsed.getTime())) {
-            const y = parsed.getFullYear();
-            const m = String(parsed.getMonth() + 1).padStart(2, "0");
-            const d = String(parsed.getDate()).padStart(2, "0");
-            dateKey = `${y}-${m}-${d}`;
-            ts = Date.UTC(y, parsed.getMonth(), parsed.getDate());
-          } else {
-            // fallback: use formatted value as key
-            dateKey = formattedVal || String(rawDateVal);
-            ts = r;
-          }
-        }
+        const dateKey = formattedVal;  // use exactly what you see in the sheet
+        const ts = r;                  // later rows = newer
 
         if (!dateMeta[dateKey]) {
-          dateMeta[dateKey] = {
-            label: formattedVal || dateKey,
-            ts
-          };
+          dateMeta[dateKey] = { label: formattedVal, ts };
         }
 
         if (!rowsByDate[dateKey]) rowsByDate[dateKey] = [];
@@ -730,7 +704,7 @@
         });
       }
 
-      // Sort by timestamp (latest first)
+      // Sort so latest rows (bottom of sheet) appear first
       sortedDates = Object.keys(dateMeta).sort(
         (a, b) => dateMeta[b].ts - dateMeta[a].ts
       );
